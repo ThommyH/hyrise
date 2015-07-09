@@ -1,0 +1,62 @@
+#pragma once
+
+/*
+ * XswBlockManager.h
+ *
+ *  Created on: May 12, 2014
+ *      Author: Jan Ole Vollmer
+ */
+
+#ifdef WITH_XSW
+
+#include <sys/types.h>
+#include "xsw_api/xsw_apis.h"
+
+#include <cstddef>
+#include <string>
+#include <vector>
+#include <map>
+
+namespace hyrise {
+namespace memory {
+
+class XswBlockManager {
+public:
+  static XswBlockManager* getDefault();
+
+public:
+  XswBlockManager();
+  XswBlockManager(const XswBlockManager&) = delete;
+  XswBlockManager(XswBlockManager&&) = delete;
+  virtual ~XswBlockManager();
+
+  XswBlockManager& operator=(const XswBlockManager&) = delete;
+
+  void* allocate(std::size_t numBytes);
+  void deallocate(void* ptr, std::size_t numBytes);
+
+  XSW_BIO* mmap();
+
+  std::size_t capacity() const;
+  void reset();
+
+private:
+  void configureFromEnv();
+  void createMmap();
+
+private:
+  std::string m_deviceName;
+  std::string m_regionName;
+  XSW_BIO* m_deviceHandle;
+  XSW_BIO* m_regionHandle;
+  XSW_BIO* m_mmap;
+  std::size_t m_currentPosition;
+  int m_minReadahead;
+  int m_maxReadahead;
+  bool m_debugMode;
+};
+
+}  // namespace memory
+}  // namespace hyrise
+
+#endif // WITH_XSW

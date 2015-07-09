@@ -1,0 +1,187 @@
+/*
+ * XswBlockManager.cpp
+ *
+ *  Created on: May 12, 2014
+ *      Author: Jan Ole Vollmer
+ */
+
+#ifdef WITH_XSW
+
+#include "XswBlockManager.h"
+
+#include <helper/literals.h>
+#include <helper/logging.h>
+
+#include <log4cxx/logger.h>
+
+#include <boost/lexical_cast.hpp>
+#include <sstream>
+
+#define PAGE_CACHE_SIZE_8GB           (1024UL*1024UL*1024UL*8UL)  // 8GB
+#define PAGE_CACHE_LOW_WATER_1GB      (1024UL*1024UL*1024UL*1UL)  // 1GB
+#define PAGE_CACHE_EVICT_1MB          (1024UL*1024UL)             // 1MB
+
+#define COLOR_COLD        0x00000000
+#define COLOR_WARM        0x00000001
+#define COLOR_WARMER      0x00000002
+#define COLOR_EVEN_WARMER 0x00000003
+#define COLOR_HOT         0x00008000
+#define COLOR_HOTER       0x00010000
+#define COLOR_VERY_HOTER  0x00100000
+#define COLOR_PLASMA      0xFFFFFFFF
+
+#define COLOR_COLDEST     0x00000000
+#define COLOR_HOTTEST     0xFFFFFFFF
+
+
+namespace hyrise {
+namespace memory {
+
+namespace {
+
+log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("memory.XswBlockManager"));
+
+const std::string g_envPrefix = "HYRISE_XSW_";
+const std::string g_envDevice = g_envPrefix + "DEVICE";
+const std::string g_envRegion = g_envPrefix + "REGION";
+const std::string g_envDebug = g_envPrefix + "DEBUG";
+
+const std::string g_envCachePrefix = g_envPrefix + "CACHE_";
+const std::string g_envCacheTag = g_envCachePrefix + "TAG";
+const std::string g_envCacheSize = g_envCachePrefix + "SIZE";
+const std::string g_envCacheLowWater = g_envCachePrefix + "LOW_WATER";
+const std::string g_envCacheEviction = g_envCachePrefix + "EVICTION";
+
+template <typename Type>
+bool assignEnv(const std::string& env, Type& target) {
+  const char* value = std::getenv(env.c_str());
+  if (value != nullptr) {
+    target = boost::lexical_cast<Type>(value);
+  }
+  return false;
+}
+
+} // anonymous namespace
+
+XswBlockManager* XswBlockManager::getDefault() {
+  static XswBlockManager defaultManager;
+  return &defaultManager;
+}
+
+XswBlockManager::XswBlockManager()
+: m_deviceName("/dev/rssda1")
+, m_regionName("hyrise")
+, m_deviceHandle(nullptr)
+, m_regionHandle(nullptr)
+, m_mmap(nullptr)
+, m_currentPosition(0)
+, m_minReadahead(1)
+, m_maxReadahead(32)
+, m_debugMode(false) {
+unsigned long size;
+unsigned char *pointer;
+unsigned long i;
+
+    XSWDebugEnable(XSW_DEBUG_ALL, XSW_DEBUG_ON);
+    XSWDebugSetOutput("xsw_api.log");
+
+        // Open up the raw device
+        m_deviceHandle = XSWRawOpen("/dev/rssda1");
+
+        if (!m_deviceHandle) {
+                printf("Failed to open /dev/rssda1\n");
+                return;
+        }
+
+        // Open up a region on the raw device
+        m_regionHandle = XSWContainerOpenRegion(m_deviceHandle, "hyrise");
+
+        if (!m_regionHandle) {
+                printf("Failed to open hyrise on /dev/rssda1\n");
+                return;
+        }
+
+
+        if (XSWMmapCreatePageCache("my_page_cache",
+                PAGE_CACHE_SIZE_8GB, PAGE_CACHE_LOW_WATER_1GB,
+                        PAGE_CACHE_EVICT_1MB, XSW_PAGE_CACHE_LRU)) {
+                printf("Failed to create page cache.\n");
+                return;
+        }
+
+        // mmap the region using the EMC mmap policy.
+        // Use the "my_page_cache" shareable page cache.
+
+        m_mmap = XSWMmapOpen(0, m_regionHandle, "my_page_cache", "xsw_memory_policy", XSW_MMAP_SHARED);
+
+        if (!m_mmap) {
+                printf("Failed to mmap device\n");
+                return;
+        }
+
+        // Setup all pages to automatically zero out on initial access
+        // vs being updated by reading them from the device. This is typically
+        // used when the mmap is being used as volatile memory.
+        XSWMmapAdvise(m_mmap, 0, m_mmap->size, XSW_ADVISE_ZEROFILL);
+
+        // Set minimum/maximum read ahead to 1 and 64.
+        XSWMmapSetupReadAhead(m_mmap, 1,64);
+}
+
+void XswBlockManager::configureFromEnv() {
+  assignEnv(g_envDevice, m_deviceName);
+  assignEnv(g_envRegion, m_regionName);
+  assignEnv(g_envDebug, m_debugMode);
+}
+
+XswBlockManager::~XswBlockManager() {
+        // Close the mmap (sync and unmap)
+        if (XSWClose(m_mmap)) {
+                printf("Failed to close the mmap handle\n");
+        }
+
+        // Close the raw device.
+        if (XSWClose(m_deviceHandle)) {
+                printf("Failed to close the raw device handle\n");
+        }
+
+        // Delete the "my_page_cache" page cache.
+        XSWMmapDeletePageCache("my_page_cache");
+}
+
+XSW_BIO* XswBlockManager::mmap() {
+  return m_mmap;
+}
+
+void* XswBlockManager::allocate(std::size_t numBytes) {
+  LOG4CXX_DEBUG(logger, "Allocating " << numBytes << " bytes starting at " << m_currentPosition);
+  if (numBytes > m_mmap->size - m_currentPosition) {
+    LOG4CXX_THROW(logger, std::bad_alloc, "Can't allocate " << numBytes << " bytes, only have " << m_mmap->size - m_currentPosition << " bytes left");
+  }
+
+  void* ptr = static_cast<char*>(m_mmap->mmap_vaddr) + m_currentPosition;
+  m_currentPosition += numBytes;
+  LOG4CXX_DEBUG(logger, "Remaining space: " << m_mmap->size - m_currentPosition << " bytes");
+  return ptr;
+}
+
+void XswBlockManager::deallocate(void* ptr, std::size_t numBytes) {
+  // do nothing
+  LOG4CXX_DEBUG(logger, "Deallocating " << numBytes << " bytes at " << static_cast<char*>(ptr) - static_cast<char*>(m_mmap->mmap_vaddr));
+}
+
+std::size_t XswBlockManager::capacity() const {
+  return m_mmap->size;
+}
+
+void XswBlockManager::reset() {
+  m_currentPosition = 0;
+}
+
+void XswBlockManager::createMmap() {
+}
+
+}  // namespace memory
+}  // namespace hyrise
+
+#endif // WITH_XSW
