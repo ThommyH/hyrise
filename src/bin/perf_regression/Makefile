@@ -3,11 +3,12 @@ hyr-perf := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 include $(hyr-perf)/../../../rules.mk
 
 include $(PROJECT_ROOT)/src/lib/access/Makefile
+include $(PROJECT_ROOT)/src/lib/memory/Makefile
 include $(PROJECT_ROOT)/third_party/Makefile
 include $(PROJECT_ROOT)/src/bin/perf_datagen/Makefile
 
 hyr-perf.binname := hyrise-perf
-hyr-perf.deps := hyr-access gtest
+hyr-perf.deps := hyr-memory hyr-access gtest
 #hyr-perf.libs := boost_program_options
 $(eval $(call full_link_binary,hyr-perf))
 all: $(hyr-perf.binary)
