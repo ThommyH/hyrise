@@ -398,9 +398,9 @@ class GroupkeyIndex : public AbstractIndex {
 
   template <class Archive>
   void serialize(Archive& ar) {
-    _dictionary->swapValues(_dictionary_values);
-    ar(_offsets, _postings, _dictionary_values);
-    _dictionary->swapValues(_dictionary_values);
+    // _dictionary->swapValues(_dictionary_values);
+    // ar(_offsets, _postings, _dictionary_values);
+    // _dictionary->swapValues(_dictionary_values);
   }
 
   const std::vector<field_t>& getColumns() const { return _columns; }
