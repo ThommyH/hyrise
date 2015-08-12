@@ -54,6 +54,10 @@ Loader::params::params(const Loader::params& other)
     ReferenceTable = other.ReferenceTable;
 }
 
+std::string Loader::params::getName() const{
+  return TableName;
+}
+
 Loader::params& Loader::params::operator=(const Loader::params& other) {
   if (this != &other) {  // protect against invalid self-assignment
     if (Input != nullptr)
@@ -120,6 +124,8 @@ std::shared_ptr<storage::AbstractTable> Loader::load(const params& args) {
     auto tbl = std::make_shared<storage::Table>(
         *partition, std::make_shared<storage::FixedLengthVector<value_id_t>>(dicts.size(), 0), dicts);
     tables.push_back(tbl);
+    // std::cout << "set colum " << args.getName()  << " all hot" << std::endl;
+    // tbl->setAllHot();
   }
 
   std::shared_ptr<storage::AbstractTable> result,  // initialize empty

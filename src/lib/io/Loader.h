@@ -51,6 +51,7 @@ class params {
   params();
   ~params();
   params(const params& other);
+  std::string getName() const;
   params& operator=(const params& other);
   params* clone() const;
 };
