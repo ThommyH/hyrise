@@ -121,7 +121,16 @@ class Table : public AbstractTable {
 
   virtual void debugStructure(size_t level = 0) const override;
 
+  void setAllHot();
+
+  void setAllCold();
+
+  void setTop10PercentHot();
+
  private:
+
+  void setTemp(int temp, int startElement, int endElement, int color);
+
   enum class DICTIONARY_FLAG {
     CREATE,
     REUSE

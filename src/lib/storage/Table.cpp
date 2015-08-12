@@ -8,10 +8,12 @@
 #include "storage/AttributeVectorFactory.h"
 #include "storage/DictionaryFactory.h"
 #include "storage/ValueIdMap.hpp"
+#include "memory/XswBlockManager.h"
 
 
 namespace hyrise {
 namespace storage {
+
 
 Table::Table(std::vector<ColumnMetadata>* m,
              std::vector<SharedDictionary>* d,
@@ -232,5 +234,22 @@ void Table::persist_scattered(const pos_list_t& elements, bool new_elements) con
 void Table::debugStructure(size_t level) const {
   std::cout << std::string(level, '\t') << "Table " << this << std::endl;
 }
+
+void Table::setTemp(int temp, int startElement, int endElement, int color){
+  memory::XswBlockManager::getDefault()->setTemperature(tuples.get(), startElement * sizeof(value_id_t), (endElement - startElement) * sizeof(value_id_t), color); 
+}
+
+void Table::setAllHot(){
+  setTemp(10000, 0, tuples->size()-1, 10000);
+}
+
+void Table::setAllCold(){
+ setTemp(10000, 0, tuples->size()-1, 0); 
+}
+
+void Table::setTop10PercentHot(){
+  setTemp(10000, 0, int(tuples->size()*0.10), 10000);
+}
+
 }
 }  // namespace hyrise::storage
