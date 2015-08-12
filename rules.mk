@@ -204,6 +204,11 @@ LINK_DIRS += /usr/local/lib
 INCLUDE_DIRS += $(PROJECT_ROOT)/src/lib
 LDFLAGS += $(LDFLAGS.$(BLD))
 
+# xsw libs
+LINK_DIRS += /usr/lib/
+LDFLAGS += -lxsw_api
+COMMON_FLAGS += -DWITH_XSW -DWITH_PAPI
+
 .PHONY          : all clean test ci_test ci_build ci_valgrind_test
 .DEFAULT_GOAL   := all
 
