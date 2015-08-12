@@ -7,7 +7,7 @@
  *      Author: Jan Ole Vollmer
  */
 
-#ifdef WITH_XSW
+// #ifdef WITH_XSW
 
 #include "BlockAllocator.h"
 #include "XswBlockManager.h"
@@ -21,19 +21,19 @@ using XswAllocator = BlockAllocator<Type, XswBlockManager>;
 }  // namespace memory
 }  // namespace hyrise
 
-#else // WITH_XSW
+// #else // WITH_XSW
 
-#warning "Compiled without XSW, falling back to Mmap"
+// #warning "Compiled without XSW, falling back to Mmap"
 
-#include "MmapAllocator.h"
+// #include "MmapAllocator.h"
 
-namespace hyrise {
-namespace memory {
+// namespace hyrise {
+// namespace memory {
 
-template <typename Type>
-using XswAllocator = MmapAllocator<Type>;
+// template <typename Type>
+// using XswAllocator = MmapAllocator<Type>;
 
-}  // namespace memory
-}  // namespace hyrise
+// }  // namespace memory
+// }  // namespace hyrise
 
-#endif // WITH_XSW
+// #endif // WITH_XSW
