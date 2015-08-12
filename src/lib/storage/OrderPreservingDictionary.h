@@ -11,6 +11,7 @@
 #include "storage/BaseIterator.h"
 #include "storage/DictionaryIterator.h"
 #include "storage/storage_types.h"
+// #include "memory/MmapAllocator.h"
 
 namespace hyrise {
 namespace storage {
@@ -21,6 +22,7 @@ class OrderPreservingDictionaryIterator;
 template <typename T>
 class OrderPreservingDictionary : public BaseDictionary<T> {
  public:
+  // typedef std::vector<T, hyrise::memory::MmapAllocator<T>> vector_type;
   typedef std::vector<T> vector_type;
   typedef std::shared_ptr<vector_type> shared_vector_type;
 

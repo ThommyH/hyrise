@@ -5,7 +5,7 @@
 #include <memory>
 #include <stdexcept>
 #include <vector>
-#include "memory/MmapAllocator.h"
+// #include "memory/XswAllocator.h"
 
 
 #include "helper/not_implemented.h"
@@ -77,7 +77,7 @@ class FixedLengthVector final : public AbstractFixedLengthVector<T> {
 #endif
   }
   const std::size_t _columns;
-  std::vector<T, hyrise::memory::MmapAllocator<T>> _values; // hier vector mit mmap allozieren
+  std::vector<T> _values; // hier vector mit mmap allozieren
 };
 }
 }  // namespace hyrise::storage
