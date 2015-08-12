@@ -106,40 +106,40 @@ void Store::merge() {
   _cidEndVector = tbb::concurrent_vector<tx::transaction_cid_t>(_main_table->size(), tx::INF_CID);
   _tidVector = tbb::concurrent_vector<tx::transaction_id_t>(_main_table->size(), tx::START_TID);
 
-#ifdef REUSE_MAIN_DICTS
-  // copy merged main's dictionaries for delta
-  for (size_t column = 0; column < columnCount(); ++column) {
-    const AbstractDictionary* dict = _main_table->dictionaryAt(column).get();
-    switch (typeOfColumn(column)) {
-      case IntegerType:
-      case IntegerTypeDelta:
-      case IntegerTypeDeltaConcurrent:
-        // case IntegerNoDictType:
-        new_delta->setDictionaryAt(std::make_shared<ConcurrentUnorderedDictionary<hyrise_int_t>>(
-                                       ((OrderPreservingDictionary<hyrise_int_t>*)dict)->getValueList()),
-                                   column);
-        break;
-      case FloatType:
-      case FloatTypeDelta:
-      case FloatTypeDeltaConcurrent:
-        // case FloatNoDictType:
-        new_delta->setDictionaryAt(std::make_shared<ConcurrentUnorderedDictionary<hyrise_float_t>>(
-                                       ((OrderPreservingDictionary<hyrise_float_t>*)dict)->getValueList()),
-                                   column);
-        break;
-      case StringType:
-      case StringTypeDelta:
-      case StringTypeDeltaConcurrent:
-        new_delta->setDictionaryAt(std::make_shared<ConcurrentUnorderedDictionary<hyrise_string_t>>(
-                                       ((OrderPreservingDictionary<hyrise_string_t>*)dict)->getValueList()),
-                                   column);
-        break;
-      case IntegerNoDictType:
-      case FloatNoDictType:
-        break;
-    }
-  }
-#endif
+// #ifdef REUSE_MAIN_DICTS
+//   // copy merged main's dictionaries for delta
+//   for (size_t column = 0; column < columnCount(); ++column) {
+//     const AbstractDictionary* dict = _main_table->dictionaryAt(column).get();
+//     switch (typeOfColumn(column)) {
+//       case IntegerType:
+//       case IntegerTypeDelta:
+//       case IntegerTypeDeltaConcurrent:
+//         // case IntegerNoDictType:
+//         new_delta->setDictionaryAt(std::make_shared<ConcurrentUnorderedDictionary<hyrise_int_t>>(
+//                                        ((OrderPreservingDictionary<hyrise_int_t>*)dict)->getValueList()),
+//                                    column);
+//         break;
+//       case FloatType:
+//       case FloatTypeDelta:
+//       case FloatTypeDeltaConcurrent:
+//         // case FloatNoDictType:
+//         new_delta->setDictionaryAt(std::make_shared<ConcurrentUnorderedDictionary<hyrise_float_t>>(
+//                                        ((OrderPreservingDictionary<hyrise_float_t>*)dict)->getValueList()),
+//                                    column);
+//         break;
+//       case StringType:
+//       case StringTypeDelta:
+//       case StringTypeDeltaConcurrent:
+//         new_delta->setDictionaryAt(std::make_shared<ConcurrentUnorderedDictionary<hyrise_string_t>>(
+//                                        ((OrderPreservingDictionary<hyrise_string_t>*)dict)->getValueList()),
+//                                    column);
+//         break;
+//       case IntegerNoDictType:
+//       case FloatNoDictType:
+//         break;
+//     }
+//   }
+// #endif
 
   // Replace the delta partition
   delta = new_delta;
