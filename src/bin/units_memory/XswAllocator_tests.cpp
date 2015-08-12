@@ -5,13 +5,14 @@
  *      Author: Jan Ole Vollmer
  */
 
-#ifdef WITH_XSW
+// #ifdef WITH_XSW
 
 #include "testing/test.h"
 
 #include "helper/literals.h"
 
 #include "memory/XswAllocator.h"
+#include "memory/XswBlockManager.h"
 
 namespace hyrise {
 namespace memory {
@@ -65,4 +66,4 @@ TEST_F(XswAllocatorTests, DISABLED_SequentialAccess) { // might be slow
 }  // namespace memory
 }  // namespace hyrise
 
-#endif // WITH_XSW
+// #endif // WITH_XSW
