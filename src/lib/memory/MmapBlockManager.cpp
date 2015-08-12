@@ -82,7 +82,7 @@ MmapBlockManager::MmapBlockManager()
 : m_filename("/home/Thomas.Hille/tmp/hyrise-mmap")
 , m_file(-1)
 , m_mmap(MAP_FAILED)
-, m_capacity(1_G)
+, m_capacity(25_G)
 , m_currentPosition(0) {
   configureFromEnv();
   createMmap();
@@ -126,6 +126,8 @@ void* MmapBlockManager::allocate(std::size_t numBytes) {
   LOG4CXX_DEBUG(logger, "Allocating " << numBytes << " bytes starting at " << m_currentPosition);
   if (numBytes > remaining()) {
     LOG4CXX_THROW(logger, std::bad_alloc, "Can't allocate " << numBytes << " bytes, only have " << remaining() << " bytes left");
+    std::bad_alloc exception;
+    throw exception;	  
   }
 
   void* ptr = static_cast<char*>(m_mmap) + m_currentPosition;
