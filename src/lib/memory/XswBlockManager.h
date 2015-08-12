@@ -7,7 +7,7 @@
  *      Author: Jan Ole Vollmer
  */
 
-#ifdef WITH_XSW
+// #ifdef WITH_XSW
 
 #include <sys/types.h>
 #include "xsw_api/xsw_apis.h"
@@ -40,10 +40,15 @@ public:
   std::size_t capacity() const;
   std::size_t remaining() const;
   void reset();
+  void setTemperature(void* block, std::int64_t offset, std::uint64_t length, XSW_COLOR temperature);
+  
+
 
 private:
   class PageCache {
   public:
+    XSW_ID pcid;
+    std::size_t size;
     PageCache();
     ~PageCache();
 
@@ -61,7 +66,6 @@ private:
     void deletePageCache();
 
     std::string m_tag;
-    std::size_t m_size;
     std::size_t m_lowWaterLevel;
     std::size_t m_evictionSize;
     Type m_type;
@@ -91,4 +95,4 @@ private:
 }  // namespace memory
 }  // namespace hyrise
 
-#endif // WITH_XSW
+// #endif // WITH_XSW

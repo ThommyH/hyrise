@@ -5,7 +5,7 @@
  *      Author: Jan Ole Vollmer
  */
 
-#ifdef WITH_XSW
+// #ifdef WITH_XSW
 
 #include "XswBlockManager.h"
 
@@ -52,7 +52,7 @@ XswBlockManager* XswBlockManager::getDefault() {
 }
 
 XswBlockManager::XswBlockManager()
-: m_deviceName("/dev/rssda1")
+: m_deviceName("/dev/fioa")
 , m_regionName("hyrise")
 , m_deviceHandle(nullptr)
 , m_regionHandle(nullptr)
@@ -135,6 +135,11 @@ void XswBlockManager::reset() {
   m_currentPosition = 0;
 }
 
+void XswBlockManager::setTemperature(void* block, std::int64_t offset, std::uint64_t length, XSW_COLOR temperature) {
+  std::uint64_t blockOffset = static_cast<char*>(block) - static_cast<char*>(m_mmap->mmap_vaddr);
+  int errCode = XSWMmapSetColor(m_mmap, blockOffset + offset, length, temperature);
+}
+
 void XswBlockManager::createMmap() {
   LOG4CXX_INFO(logger, "Creating mapping on device: " << m_deviceName << ", region: " << m_regionName);
 
@@ -151,7 +156,8 @@ void XswBlockManager::createMmap() {
   }
 
   // create mapping
-  m_mmap = XSWMmapOpen(0, m_regionHandle, const_cast<char*>(m_pageCache->tag().c_str()), const_cast<char*>("xsw_memory_policy"), XSW_MMAP_SHARED);
+  // m_mmap = XSWMmapOpen(0, m_regionHandle, const_cast<char*>(m_pageCache->tag().c_str()), const_cast<char*>("xsw_memory_policy"), XSW_MMAP_SHARED);
+  m_mmap = XSWMmapOpen(0, m_pageCache->size, m_regionHandle, 0, m_pageCache->pcid, XSW_MMAP_FILE|XSW_MMAP_SHARED);
   if (m_mmap == nullptr) {
     LOG4CXX_THROW(logger, std::runtime_error, "XswBlockManager: Failed to open mmap");
   }
@@ -176,7 +182,7 @@ void XswBlockManager::createMmap() {
 
 XswBlockManager::PageCache::PageCache()
 : m_tag("hyrise")
-, m_size(8_G)
+, size(8_G)
 , m_lowWaterLevel(1_G)
 , m_evictionSize(1_M)
 , m_type(k_lru) {
@@ -190,25 +196,26 @@ XswBlockManager::PageCache::~PageCache() {
 
 void XswBlockManager::PageCache::configureFromEnv() {
   assignEnv(k_envCacheTag, m_tag);
-  assignEnv(k_envCacheSize, m_size);
+  assignEnv(k_envCacheSize, size);
   assignEnv(k_envCacheLowWater, m_lowWaterLevel);
   assignEnv(k_envCacheEviction, m_evictionSize);
 }
 
 void XswBlockManager::PageCache::createPageCache() {
-  int errCode;
+  
 
   // delete existing cache, if any (e.g. from a crashed previous execution)
-  if (XSWMmapQueryPageCache(const_cast<char*>(m_tag.c_str()), nullptr) == 0) {
-    LOG4CXX_WARN(logger, "page cache '" << m_tag << "' already exists, deleting it...");
-    deletePageCache();
-  }
+  // if (XSWMmapQueryPageCache(const_cast<char*>(m_tag.c_str()), nullptr) == 0) {
+  //   LOG4CXX_WARN(logger, "page cache '" << m_tag << "' already exists, deleting it...");
+  //   deletePageCache();
+  // }
 
-  LOG4CXX_INFO(logger, "Creating page cache '" << m_tag << "' with size: " << m_size << ", low water level: " << m_lowWaterLevel << ", eviction size: " << m_evictionSize << ", type: " << m_type);
+  LOG4CXX_INFO(logger, "Creating page cache '" << m_tag << "' with size: " << size << ", low water level: " << m_lowWaterLevel << ", eviction size: " << m_evictionSize << ", type: " << m_type);
 
   // create cache
-  errCode = XSWMmapCreatePageCache(const_cast<char*>(m_tag.c_str()), m_size, m_lowWaterLevel, m_evictionSize, m_type);
-  if (errCode != 0) {
+  //errCode = XSWMmapCreatePageCache(const_cast<char*>(m_tag.c_str()), size, m_lowWaterLevel, m_evictionSize, m_type);
+  pcid = XSWMmapCreatePageCache(const_cast<char*>(m_tag.c_str()), size, m_lowWaterLevel, m_evictionSize, m_type);
+  if (pcid == 0) {
     LOG4CXX_THROW(logger, std::runtime_error, "XswBlockManager: Failed to create page cache");
   }
 }
@@ -216,7 +223,8 @@ void XswBlockManager::PageCache::createPageCache() {
 void XswBlockManager::PageCache::deletePageCache() {
   LOG4CXX_INFO(logger, "Deleting page cache '" << m_tag << "'");
 
-  int errCode = XSWMmapDeletePageCache(const_cast<char*>(m_tag.c_str()));
+  // int errCode = XSWMmapDeletePageCache(const_cast<char*>(m_tag.c_str()));
+  int errCode = XSWMmapDeletePageCache(pcid);
   if (errCode != 0) {
     LOG4CXX_WARN(logger, "Failed to delete page cache '" << m_tag << "'");
   }
@@ -225,4 +233,4 @@ void XswBlockManager::PageCache::deletePageCache() {
 }  // namespace memory
 }  // namespace hyrise
 
-#endif // WITH_XSW
+// #endif // WITH_XSW
